@@ -27,14 +27,15 @@ def efficiency_gap(district_graph):
     """
     d_votes = r_votes = winning_votes = losing_votes = 0.00
     winning_group = ""
-    total_votes = district_graph.node_size
-    votes_to_win = district_graph/2
+    total_votes = len(district_graph.nodes)
+    votes_to_win = total_votes/2
 
     # Tally total votes
-    for precint in district_graph.nodes:
-        if precint.voting_history == "D":
+    for precint_label in district_graph.nodes:
+        precint = district_graph.nodes[precint_label]
+        if precint["voting_history"] == "D":
             d_votes += 1
-        elif precint.voting_history == "R":
+        elif precint["voting_history"] == "R":
             r_votes += 1
     
     # Determine who the wining_group is and what the efficiency gap is
@@ -74,8 +75,18 @@ def drawGraph(G):
     # Draw the graph we've been provided
     nx.draw_spectral(G.subgraph(["d",'e','f','g','h']), **options)
     nx.draw_spectral(G.subgraph(["a", "b", "c"]), **options)
-    plt.show();
+    # plt.show();
 
 g = import_graph(path_adjlist, path_metadata)
 
-drawGraph(g)
+def get_district(g, district_label):
+    relevant_nodes = [n for n in g.nodes if g.nodes[n]["district"] is district_label]
+    return g.subgraph(relevant_nodes) 
+
+# drawGraph(g)
+all_districts = ["1","2"]
+
+for d_label in all_districts: 
+    d = get_district(g, d_label)
+    x = efficiency_gap(d)
+    print(x)
