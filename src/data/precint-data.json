@@ -1,0 +1,42 @@
+{
+    "a": {
+        "population": 50,
+        "voting_history": "D",
+        "district": "1"
+    },
+    "b": {
+        "population": 55,
+        "voting_history": "R",
+        "district": "1"
+    },
+    "c": {
+        "population": 45,
+        "voting_history": "R",
+        "district": "1"
+    },
+    "d": {
+        "population": 40,
+        "voting_history": "R",
+        "district": "1"
+    },
+    "e": {
+        "population": 30,
+        "voting_history": "D",
+        "district": "2"
+    },
+    "f": {
+        "population": 45,
+        "voting_history": "D",
+        "district": "2"
+    },
+    "g": {
+        "population": 60,
+        "voting_history": "D",
+        "district": "2"
+    },
+    "h": {
+        "population": 55,
+        "voting_history": "D",
+        "district": "2"
+    }
+}
