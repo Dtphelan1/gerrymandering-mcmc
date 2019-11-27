@@ -6,5 +6,4 @@ if __name__ == "__main__":
                         help='an integer for the accumulator')
     args = parser.parse_args()
 
-    exit 1
 
