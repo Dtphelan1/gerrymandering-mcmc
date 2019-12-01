@@ -1,14 +1,18 @@
-a b c d e f g h i j k l m n 
-b a c d e f g h i j k l m n 
-c d e f g h i j k l m n a b 
-d e f g h i j k l m n a b c 
-e a b c d f g h i j k l m n 
-f a b c d e g h i j k l m n 
-g a b c d e f h i j k l m n 
-h a b c d e f g i j k l m n 
-i a b c d e f g h j k l m n 
-j a b c d e f g h i k l m n
-k a b c d e f g h i j l m n 
-l a b c d e f g h i j k m n 
-m a b c d e f g h i j k l n 
-n a b c d e f g h i j k l m 
+a b c e 
+b c d 
+c d e f 
+d f g 
+e f i j k 
+f g h i 
+g h 
+h i l m 
+i k l p 
+j k p q 
+k 
+l m n o p 
+m n 
+n o r 
+o p r 
+p q 
+q 
+r

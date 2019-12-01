@@ -68,5 +68,25 @@
         "population": 55,
         "voting_history": "D",
         "district": "1"
+    },
+    "o": {
+        "population": 50,
+        "voting_history": "D",
+        "district": "1"
+    },
+    "p": {
+        "population": 40,
+        "voting_history": "R",
+        "district": "2"
+    },
+    "q": {
+        "population": 60,
+        "voting_history": "R",
+        "district": "2"
+    },
+    "r": {
+        "population": 50,
+        "voting_history": "D",
+        "district": "1"
     }
 }
