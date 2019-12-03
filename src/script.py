@@ -4,6 +4,7 @@ import random
 import networkx as nx
 import matplotlib.pyplot as plt
 from functools import reduce
+import argparse
 
 # Globals we care about
 path_adjlist = "./data/adjlist.txt"
@@ -17,8 +18,13 @@ district_colors = {
     "1": "red",
     "2": "blue"
 }
+file_lookup_table = {
+    "adj": path_adjlist,
+    "edge": path_edgelist,
+    "shp": path_shpfile
+}
 
-def import_graph(path_graph, path_metadata):
+def import_graph(path_graph, path_metadata, ignore_meta=False):
     """
         Given a path to an adj_list/edge_list file describing a graph,
             and a path to a metadata file describing relevant information about precints
@@ -30,11 +36,12 @@ def import_graph(path_graph, path_metadata):
         # g = nx.read_edgelist(path_graph)
         g = nx.read_shp(path_graph)
 
-    metadata = load_json(path_metadata)
-    for node_label in metadata:
-        g.nodes[node_label]["population"] = metadata[node_label]["population"]
-        g.nodes[node_label]["voting_history"] = metadata[node_label]["voting_history"]
-        g.nodes[node_label]["district"] = metadata[node_label]["district"]
+    if not ignore_meta:
+        metadata = load_json(path_metadata)
+        for node_label in metadata:
+            g.nodes[node_label]["population"] = metadata[node_label]["population"]
+            g.nodes[node_label]["voting_history"] = metadata[node_label]["voting_history"]
+            g.nodes[node_label]["district"] = metadata[node_label]["district"]
     return g
 
 
@@ -95,7 +102,8 @@ def efficiency_gap(district_graph):
     return (efficiency_gap, winning_group)
 
 
-def find_neighboring_district(graph, district_subgraph):
+# def find_neighboring_district(graph, district_subgraph):
+def find_neighboring_district(district):
     """
         Given a district, find a district that neighbors it
         TODO: Do this meaningfully
@@ -209,9 +217,13 @@ def drawGraph(G, options=None):
     plt.show()
 
 def main():
-    # g = import_graph(path_edgelist, path_metadata)
-    g = import_graph(path_adjlist, path_metadata)
-    # g = import_graph(path_shpfile, path_metadata)
+    parser = argparse.ArgumentParser(description='Use MCMC Simulation to determine the likelihood that a particular district is an outlier by the efficiency gap metric')
+    parser.add_argument("file")
+    args = parser.parse_args()
+
+    path = file_lookup_table[args.file]
+
+    g = import_graph(path, path_metadata, ignore_meta=(args.file == "shp"))
     drawGraph(g)
 
     # For all districts, draw the graph

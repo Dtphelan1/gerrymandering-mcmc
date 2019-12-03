@@ -22,22 +22,22 @@
     "e": {
         "population": 30,
         "voting_history": "D",
-        "district": "2"
+        "district": "1"
     },
     "f": {
         "population": 45,
         "voting_history": "D",
-        "district": "2"
+        "district": "1"
     },
     "g": {
         "population": 60,
         "voting_history": "D",
-        "district": "2"
+        "district": "1"
     },
     "h": {
         "population": 55,
         "voting_history": "D",
-        "district": "2"
+        "district": "1"
     },
     "i": {
         "population": 55,
@@ -57,22 +57,22 @@
     "l": {
         "population": 55,
         "voting_history": "D",
-        "district": "1"
+        "district": "2"
     },
     "m": {
         "population": 55,
         "voting_history": "D",
-        "district": "1"
+        "district": "2"
     },
     "n": {
         "population": 55,
         "voting_history": "D",
-        "district": "1"
+        "district": "2"
     },
     "o": {
         "population": 50,
         "voting_history": "D",
-        "district": "1"
+        "district": "2"
     },
     "p": {
         "population": 40,
@@ -87,6 +87,6 @@
     "r": {
         "population": 50,
         "voting_history": "D",
-        "district": "1"
+        "district": "2"
     }
 }
