@@ -246,6 +246,10 @@ def drawGraph(G, options=None):
     plt.show()
 
 def random_spanning_tree(graph):
+    """
+        Given a graph
+        Return a random spanning tree
+    """
     for edge in graph.edges:
         graph.edges[edge]["weight"] = random.random()
 
