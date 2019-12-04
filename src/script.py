@@ -137,8 +137,8 @@ def district_size(potential_district):
 
 def check_condition_for_edge_cut(edge, mst_combined_subgraph, g):
     """
-        For a given potential edge cut on an MST in the ReComb algorithm, 
-        Determine whether a series of required conditions is satisfied, including: 
+        For a given potential edge cut on an MST in the ReComb algorithm,
+        Determine whether a series of required conditions is satisfied, including:
             1. Population size after new districting,
     """
     # 1. Check the population size after this cut
@@ -148,9 +148,9 @@ def check_condition_for_edge_cut(edge, mst_combined_subgraph, g):
     components = list(nx.connected_components(mst_combined_subgraph))
     comp_1 = g.subgraph(components[0])
     comp_2 = g.subgraph(components[1])
-    pop_total = abs(district_size(comp_1) + district_size(comp_2)) 
+    pop_total = abs(district_size(comp_1) + district_size(comp_2))
     pop_diff = abs(district_size(comp_1) - district_size(comp_2))
-    # Add edge back in case this doesn't work 
+    # Add edge back in case this doesn't work
     mst_combined_subgraph.add_edge(tail, head)
     return pop_diff < (MAX_POP_DIFFERENCE_PERCENTAGE*pop_total)
 
@@ -158,8 +158,8 @@ def check_condition_for_edge_cut(edge, mst_combined_subgraph, g):
 def update_new_districts_with_cut(edge, mst_combined_subgraph, g, d1, d2):
     """
         After chcecking that an edge chould be cut to create new districts after combining into a single mega-district
-        Redistrict the new components accordingly 
-    """ 
+        Redistrict the new components accordingly
+    """
     (tail, head) = edge
     mst_combined_subgraph.remove_edge(tail, head)
     components = list(nx.connected_components(mst_combined_subgraph))
@@ -169,7 +169,7 @@ def update_new_districts_with_cut(edge, mst_combined_subgraph, g, d1, d2):
     drawGraph(comp_2)
     for node in comp_1.nodes:
         g.nodes[node]["district"] = d1
-    for node in comp_2.nodes: 
+    for node in comp_2.nodes:
         g.nodes[node]["district"] = d2
 
 
@@ -195,6 +195,8 @@ def recombination_of_districts(g, attempts):
         # NOTE: Have to use PRIM's here becuase Kruskal's will return the same MST every time.
         print(combined_subgraph.nodes)
         print(set(combined_subgraph.nodes))
+        combined_subgraph = shuffle_nodes(combined_subgraph)
+        print(combined_subgraph.nodes)
         print(set(combined_subgraph.nodes))
         mst_combined_subgraph =  nx.minimum_spanning_tree(combined_subgraph, algorithm="prim")
         drawGraph(mst_combined_subgraph)
@@ -249,6 +251,22 @@ def drawGraph(G, options=None):
     nx.draw_networkx(G, **options)
     plt.show()
 
+
+def shuffle_nodes(g):
+    """
+        Shuffles the nodes in a graph and changes the graph by reference
+    """
+    print("in shuffle")
+    print(g.nodes)
+    nodes = g.nodes
+    nodes_shuff = list(nodes)
+    random.shuffle(nodes_shuff)
+    g1 = nx.relabel_nodes(g, dict(zip(nodes, nodes_shuff)))
+    print(g1.nodes)
+    print("out shuffle")
+    return g1
+
+
 def main():
     parser = argparse.ArgumentParser(description='Use MCMC Simulation to determine the likelihood that a particular district is an outlier by the efficiency gap metric')
     parser.add_argument("-f", "--file", default="edge")
@@ -256,13 +274,14 @@ def main():
     parser.add_argument("-a", "--attempts", type=int, default=20)
     args = parser.parse_args()
 
-    file = args.file
+    f = args.file
     recomb = args.recomb
     attempts = args.attempts
 
-    path = file_lookup_table[file]
+    path = file_lookup_table[f]
 
-    g = import_graph(path, path_metadata, ignore_meta=(file == "shp"))
+    g = import_graph(path, path_metadata, ignore_meta=(f == "shp"))
+    drawGraph(g)
     drawGraph(g)
 
     if recomb:
