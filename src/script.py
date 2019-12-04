@@ -195,7 +195,6 @@ def recombination_of_districts(g, attempts):
         # NOTE: Have to use PRIM's here becuase Kruskal's will return the same MST every time.
         print(combined_subgraph.nodes)
         print(set(combined_subgraph.nodes))
-        random.randint()
         print(set(combined_subgraph.nodes))
         mst_combined_subgraph =  nx.minimum_spanning_tree(combined_subgraph, algorithm="prim")
         drawGraph(mst_combined_subgraph)
