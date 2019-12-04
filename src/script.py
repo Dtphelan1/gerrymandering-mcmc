@@ -12,7 +12,6 @@ path_edgelist = "./data/edgelist.txt"
 path_shpfile = "./data/stations/stations.shp"
 path_metadata = "./data/precint-data.json"
 MAX_POP_DIFFERENCE_PERCENTAGE = .1
-MAX_ATTEMPTS = 400
 all_districts = ["1", "2"]
 district_colors = {
     "1": "red",
@@ -140,7 +139,7 @@ def district_size(potential_district):
     return reduce(lambda total, precinct: total + int(potential_district.nodes[precinct]["population"]), potential_district.nodes(), 0)
 
 
-def recombination_of_districts(g):
+def recombination_of_districts(g, attempts=400):
     """
         Given a graph
         Perform the recombination algorithm described in https://mggg.org/va-report.pdf
@@ -162,7 +161,6 @@ def recombination_of_districts(g):
         mst_combined_subgraph =  nx.minimum_spanning_tree(combined_subgraph, algorithm="prim")
         drawGraph(mst_combined_subgraph)
         # For all edges in the MST
-        print(MAX_POP_DIFFERENCE_PERCENTAGE*district_size(combined_subgraph))
         for (tail, head) in mst_combined_subgraph.edges:
             # Does cutting this edges create two components with similar population sizes?
             mst_combined_subgraph.remove_edge(tail, head)
@@ -178,7 +176,7 @@ def recombination_of_districts(g):
                 cuttable = True
                 print("WE HAVE A WINNER")
                 return (tail, head)
-            if (attempt_count == MAX_ATTEMPTS):
+            if (attempt_count == attempts):
                 return
             else:
                 attempt_count += 1
@@ -219,22 +217,29 @@ def drawGraph(G, options=None):
 def main():
     parser = argparse.ArgumentParser(description='Use MCMC Simulation to determine the likelihood that a particular district is an outlier by the efficiency gap metric')
     parser.add_argument("file")
+    parser.add_argument("recomb")
+    parser.add_argument("-a", "--attempts", type=int)
     args = parser.parse_args()
 
-    path = file_lookup_table[args.file]
+    file = args.file
+    recomb = args.recomb
+    attempts = args.attempts
 
-    g = import_graph(path, path_metadata, ignore_meta=(args.file == "shp"))
+    path = file_lookup_table[file]
+
+    g = import_graph(path, path_metadata, ignore_meta=(file == "shp"))
     drawGraph(g)
 
-    # For all districts, draw the graph
-    # for d_obj in all_districts:
-    #     d = get_district_subgraph(g, d_obj.label)
-    #     eg = efficiency_gap(d)
-    #     print(eg)
+    if recomb == "y" or recomb =="Y" or recomb =="yes" or recomb =="Yes":
+        # For all districts, draw the graph
+        for d_label in all_districts:
+            d_graph = get_district_subgraph(g, d_label)
+            eg = efficiency_gap(d_graph)
+            print(eg)
 
-    # print("Recomb")
-    # print("==========")
-    # recombination_of_districts(g, all_districts)
+        print("Recomb")
+        print("==========")
+        recombination_of_districts(g, attempts)
 
 if __name__ == "__main__":
     main()
