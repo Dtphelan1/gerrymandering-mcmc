@@ -2,6 +2,7 @@ from pathlib import Path
 import json
 import random
 import networkx as nx
+from networkx.algorithms import tree
 import matplotlib.pyplot as plt
 from functools import reduce
 import argparse
@@ -10,7 +11,7 @@ import argparse
 path_adjlist = "./data/adjlist.txt"
 path_edgelist = "./data/edgelist.txt"
 path_metadata = "./data/precint-data.json"
-MAX_POP_DIFFERENCE_PERCENTAGE = .15
+MAX_POP_DIFFERENCE_PERCENTAGE = .05
 all_districts = ["1", "2"]
 district_colors = {
     "1": "red",
@@ -137,8 +138,8 @@ def district_size(potential_district):
 
 def check_condition_for_edge_cut(edge, mst_combined_subgraph, g):
     """
-        For a given potential edge cut on an MST in the ReComb algorithm, 
-        Determine whether a series of required conditions is satisfied, including: 
+        For a given potential edge cut on an MST in the ReComb algorithm,
+        Determine whether a series of required conditions is satisfied, including:
             1. Population size after new districting,
     """
     # 1. Check the population size after this cut
@@ -148,9 +149,9 @@ def check_condition_for_edge_cut(edge, mst_combined_subgraph, g):
     components = list(nx.connected_components(mst_combined_subgraph))
     comp_1 = g.subgraph(components[0])
     comp_2 = g.subgraph(components[1])
-    pop_total = abs(district_size(comp_1) + district_size(comp_2)) 
+    pop_total = abs(district_size(comp_1) + district_size(comp_2))
     pop_diff = abs(district_size(comp_1) - district_size(comp_2))
-    # Add edge back in case this doesn't work 
+    # Add edge back in case this doesn't work
     mst_combined_subgraph.add_edge(tail, head)
     return pop_diff < (MAX_POP_DIFFERENCE_PERCENTAGE*pop_total)
 
@@ -158,8 +159,8 @@ def check_condition_for_edge_cut(edge, mst_combined_subgraph, g):
 def update_new_districts_with_cut(edge, mst_combined_subgraph, g, d1, d2):
     """
         After chcecking that an edge chould be cut to create new districts after combining into a single mega-district
-        Redistrict the new components accordingly 
-    """ 
+        Redistrict the new components accordingly
+    """
     (tail, head) = edge
     mst_combined_subgraph.remove_edge(tail, head)
     components = list(nx.connected_components(mst_combined_subgraph))
@@ -169,7 +170,7 @@ def update_new_districts_with_cut(edge, mst_combined_subgraph, g, d1, d2):
     drawGraph(comp_2)
     for node in comp_1.nodes:
         g.nodes[node]["district"] = d1
-    for node in comp_2.nodes: 
+    for node in comp_2.nodes:
         g.nodes[node]["district"] = d2
 
 
@@ -192,17 +193,12 @@ def recombination_of_districts(g, attempts):
     print("Trying to find a cut")
     attempt_count = 0
     while cuttable is False:
-        # NOTE: Have to use PRIM's here becuase Kruskal's will return the same MST every time.
-        print(combined_subgraph.nodes)
-        print(set(combined_subgraph.nodes))
-        print(set(combined_subgraph.nodes))
-        mst_combined_subgraph =  nx.minimum_spanning_tree(combined_subgraph, algorithm="prim")
+        mst_combined_subgraph =  random_spanning_tree(g)
         drawGraph(mst_combined_subgraph)
         # For all edges in the MST
         for edge in mst_combined_subgraph.edges:
             # NOTE: Just print somewhat regularly for outputs sake - helps detect infinite loops
             print("... ", attempt_count) if attempt_count % 10 == 0 else None
-            # print(attempt_count)
             cond = check_condition_for_edge_cut(edge, mst_combined_subgraph, g)
             if (cond):
                 cuttable = True
@@ -248,6 +244,15 @@ def drawGraph(G, options=None):
     # Draw the graph we've been provided
     nx.draw_networkx(G, **options)
     plt.show()
+
+def random_spanning_tree(graph):
+    for edge in graph.edges:
+        graph.edges[edge]["weight"] = random.random()
+
+    spanning_tree = tree.maximum_spanning_tree(
+        graph, algorithm="kruskal", weight="weight"
+    )
+    return spanning_tree
 
 def main():
     parser = argparse.ArgumentParser(description='Use MCMC Simulation to determine the likelihood that a particular district is an outlier by the efficiency gap metric')
