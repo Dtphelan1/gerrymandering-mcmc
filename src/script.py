@@ -9,7 +9,6 @@ import argparse
 # Globals we care about
 path_adjlist = "./data/adjlist.txt"
 path_edgelist = "./data/edgelist.txt"
-path_shpfile = "./data/stations/stations.shp"
 path_metadata = "./data/precint-data.json"
 MAX_POP_DIFFERENCE_PERCENTAGE = .1
 all_districts = ["1", "2"]
@@ -19,8 +18,7 @@ district_colors = {
 }
 file_lookup_table = {
     "adj": path_adjlist,
-    "edge": path_edgelist,
-    "shp": path_shpfile
+    "edge": path_edgelist
 }
 
 def import_graph(path_graph, path_metadata, ignore_meta=False):
@@ -32,8 +30,7 @@ def import_graph(path_graph, path_metadata, ignore_meta=False):
     try:
         g = nx.read_adjlist(path_graph)
     except:
-        # g = nx.read_edgelist(path_graph)
-        g = nx.read_shp(path_graph)
+        g = nx.read_edgelist(path_graph)
 
     if not ignore_meta:
         metadata = load_json(path_metadata)
