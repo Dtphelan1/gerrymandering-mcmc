@@ -10,7 +10,7 @@ import argparse
 path_adjlist = "./data/adjlist.txt"
 path_edgelist = "./data/edgelist.txt"
 path_metadata = "./data/precint-data.json"
-MAX_POP_DIFFERENCE_PERCENTAGE = .1
+MAX_POP_DIFFERENCE_PERCENTAGE = .15
 all_districts = ["1", "2"]
 district_colors = {
     "1": "red",
@@ -135,12 +135,51 @@ def district_size(potential_district):
     """
     return reduce(lambda total, precinct: total + int(potential_district.nodes[precinct]["population"]), potential_district.nodes(), 0)
 
+def check_condition_for_edge_cut(edge, mst_combined_subgraph, g):
+    """
+        For a given potential edge cut on an MST in the ReComb algorithm, 
+        Determine whether a series of required conditions is satisfied, including: 
+            1. Population size after new districting,
+    """
+    # 1. Check the population size after this cut
+    # Does cutting this edges create two components with similar population sizes?
+    (tail, head) = edge
+    mst_combined_subgraph.remove_edge(tail, head)
+    components = list(nx.connected_components(mst_combined_subgraph))
+    comp_1 = g.subgraph(components[0])
+    comp_2 = g.subgraph(components[1])
+    pop_total = abs(district_size(comp_1) + district_size(comp_2)) 
+    pop_diff = abs(district_size(comp_1) - district_size(comp_2))
+    # Add edge back in case this doesn't work 
+    mst_combined_subgraph.add_edge(tail, head)
+    return pop_diff < (MAX_POP_DIFFERENCE_PERCENTAGE*pop_total)
 
-def recombination_of_districts(g, attempts=400):
+
+def update_new_districts_with_cut(edge, mst_combined_subgraph, g, d1, d2):
+    """
+        After chcecking that an edge chould be cut to create new districts after combining into a single mega-district
+        Redistrict the new components accordingly 
+    """ 
+    (tail, head) = edge
+    mst_combined_subgraph.remove_edge(tail, head)
+    components = list(nx.connected_components(mst_combined_subgraph))
+    comp_1 = g.subgraph(components[0])
+    drawGraph(comp_1)
+    comp_2 = g.subgraph(components[1])
+    drawGraph(comp_2)
+    for node in comp_1.nodes:
+        g.nodes[node]["district"] = d1
+    for node in comp_2.nodes: 
+        g.nodes[node]["district"] = d2
+
+
+def recombination_of_districts(g, attempts):
     """
         Given a graph
         Perform the recombination algorithm described in https://mggg.org/va-report.pdf
         (Metric Geometry and Gerrymandering Group, Comparison of Districting Plans for the Virginia House of Delegates; Section 2.3.2)
+        Alternative resource: the recombination algorithm described in https://arxiv.org/pdf/1911.05725.pdf
+        (Recombination: A family of Markov chains for redistricting - Daryl DeFord, Moon Duchin, and Justin Solomon)
     """
     # Randomly sample a district
     d1 = str(random.randint(1, len(all_districts)))
@@ -148,35 +187,35 @@ def recombination_of_districts(g, attempts=400):
     d2 = find_neighboring_district(d1)
     d1_nodes = get_district_nodes(g, d1)
     d2_nodes = get_district_nodes(g, d2)
-    combined_subgraph = nx.Graph(g.subgraph(d1_nodes + d2_nodes))
+    combined_subgraph = g.subgraph(d1_nodes + d2_nodes)
     cuttable = False
     print("Trying to find a cut")
     attempt_count = 0
     while cuttable is False:
         # NOTE: Have to use PRIM's here becuase Kruskal's will return the same MST every time.
-        # mst_combined_subgraph =  nx.minimum_spanning_tree(combined_subgraph)
+        print(combined_subgraph.nodes)
+        print(set(combined_subgraph.nodes))
+        random.randint()
+        print(set(combined_subgraph.nodes))
         mst_combined_subgraph =  nx.minimum_spanning_tree(combined_subgraph, algorithm="prim")
         drawGraph(mst_combined_subgraph)
         # For all edges in the MST
-        for (tail, head) in mst_combined_subgraph.edges:
-            # Does cutting this edges create two components with similar population sizes?
-            mst_combined_subgraph.remove_edge(tail, head)
-            components = list(nx.connected_components(mst_combined_subgraph))
-            comp_1 = g.subgraph(components[0])
-            comp_2 = g.subgraph(components[1])
-            pop_diff = abs(district_size(comp_1) - district_size(comp_2))
+        for edge in mst_combined_subgraph.edges:
+            # NOTE: Just print somewhat regularly for outputs sake - helps detect infinite loops
             print("... ", attempt_count) if attempt_count % 10 == 0 else None
-            if (pop_diff < MAX_POP_DIFFERENCE_PERCENTAGE*district_size(combined_subgraph)):
-                print("Cutting edge: ", tail, head)
-                print(components)
-                print(pop_diff)
+            # print(attempt_count)
+            cond = check_condition_for_edge_cut(edge, mst_combined_subgraph, g)
+            if (cond):
                 cuttable = True
                 print("WE HAVE A WINNER")
-                return (tail, head)
+                update_new_districts_with_cut(edge, mst_combined_subgraph, g, d1, d2)
+                drawGraph(g)
+                return edge
             if (attempt_count == attempts):
                 return
             else:
                 attempt_count += 1
+                (tail, head) = edge
                 mst_combined_subgraph.add_edge(tail, head)
 
 # ReCom Algo:
@@ -213,9 +252,9 @@ def drawGraph(G, options=None):
 
 def main():
     parser = argparse.ArgumentParser(description='Use MCMC Simulation to determine the likelihood that a particular district is an outlier by the efficiency gap metric')
-    parser.add_argument("file")
-    parser.add_argument("recomb")
-    parser.add_argument("-a", "--attempts", type=int)
+    parser.add_argument("-f", "--file", default="edge")
+    parser.add_argument("-r", "--recomb", action="store_true")
+    parser.add_argument("-a", "--attempts", type=int, default=20)
     args = parser.parse_args()
 
     file = args.file
@@ -227,7 +266,7 @@ def main():
     g = import_graph(path, path_metadata, ignore_meta=(file == "shp"))
     drawGraph(g)
 
-    if recomb == "y" or recomb =="Y" or recomb =="yes" or recomb =="Yes":
+    if recomb:
         # For all districts, draw the graph
         for d_label in all_districts:
             d_graph = get_district_subgraph(g, d_label)
