@@ -4,7 +4,7 @@ Markov chain monte carlo simulator used to assess the outliership of a district 
 
 ## Setup
 - This project was built using python 3.7.5 and pyenv
-- To install all dependencies required, run `pip install -r=requirements.txt`
+- To install all dependencies required, run `pip install -r requirements.txt`
 
 
 ## CLI:
