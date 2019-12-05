@@ -3,12 +3,12 @@ Markov chain monte carlo simulator used to assess the outliership of a district 
 
 
 ## Setup
-- This project was built using python 3.7.5 and pyenv
+- This project was built using `python 3.7.5`, `pyenv` and `pyenv-virtualenv`
 - To install all dependencies required, run `pip install -r requirements.txt`
 
 
-## CLI:
-The command line interface (CLI) for
+## Usage
+- TEMPORARY: `cd` into the `src` directory and from there run `python script.py`
 
 
 ## Rough Sketch of the Project
@@ -81,4 +81,3 @@ Thought: Store at the class level the neighboring relationship between districts
     - Twitter: https://twitter.com/gerrymandr
     - GitHub: https://github.com/mggg
 - "Recombination: A family of Markov chains for redistricting"; Daryl DeFord, Moon Duchin, and Justin Solomon
--
