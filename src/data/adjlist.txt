@@ -1,18 +1,18 @@
-a b c e 
-b c d 
-c d e f 
-d f g 
-e f i j k 
-f g h i 
-g h 
-h i l m 
-i k l p 
-j k p q 
-k 
-l m n o p 
-m n 
-n o r 
-o p r 
-p q 
-q 
-r
+"a" "b" "c" "e" 
+"b" "c" "d" 
+"c" "d" "e" "f" 
+"d" "f" "g" 
+"e" "f" "i" "j" "k" 
+"f" "g" "h" "i" 
+"g" "h" 
+"h" "i" "l" "m" 
+"i" "k" "l" "p" 
+"j" "k" "p" "q" 
+"k" 
+"l" "m" "n" "o" "p" 
+"m" "n" 
+"n" "o" "r" 
+"o" "p" "r" 
+"p" "q" 
+"q" 
+"r"

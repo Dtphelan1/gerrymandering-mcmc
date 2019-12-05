@@ -8,282 +8,276 @@ from functools import reduce
 import argparse
 
 # Globals we care about
-path_adjlist = "./data/adjlist.txt"
-path_edgelist = "./data/edgelist.txt"
-path_metadata = "./data/precint-data.json"
+default_file = "./data/precint-data.json"
 MAX_POP_DIFFERENCE_PERCENTAGE = .05
-all_districts = ["1", "2"]
 district_colors = {
     "1": "red",
     "2": "blue"
 }
-file_lookup_table = {
-    "adj": path_adjlist,
-    "edge": path_edgelist
-}
 
-def import_graph(path_graph, path_metadata, ignore_meta=False):
-    """
-        Given a path to an adj_list/edge_list file describing a graph,
-            and a path to a metadata file describing relevant information about precints
-        Returns a nx.Graph with relevant metadata stored on the node objects
-    """
-    try:
-        g = nx.read_adjlist(path_graph)
-    except:
-        g = nx.read_edgelist(path_graph)
+class GerrymanderingMCMC(): 
+    def __init__(self, path_graph, cooling_period=50, rounds=200): 
+        # We initialize all_districts here, but we really establish it when we read our graph in
+        self.all_districts = set()
+        self.g = self.read_graph(path_graph)
+        self.cooling_period = cooling_period
+        self.rounds = rounds
 
-    if not ignore_meta:
-        metadata = load_json(path_metadata)
-        for node_label in metadata:
-            g.nodes[node_label]["population"] = metadata[node_label]["population"]
-            g.nodes[node_label]["voting_history"] = metadata[node_label]["voting_history"]
-            g.nodes[node_label]["district"] = metadata[node_label]["district"]
-    return g
+    def read_graph(self, path):
+        """
+            Given a path to an specialized JSON format describing a graph and it's metadata
+            Returns a nx.Graph with relevant metadata stored on the node objects
+        """
+        g = nx.Graph()
+        node_data = self.__load_json(path)
+        for node_label in node_data:
+            # Read in nodes from json format
+            g.add_node(node_label)
+            for adj_node in node_data[node_label]["adjacent_nodes"]:
+                g.add_edge(node_label, adj_node)
+            g.nodes[node_label]["population"] = node_data[node_label]["population"]
+            g.nodes[node_label]["voting_history"] = node_data[node_label]["voting_history"]
+            g.nodes[node_label]["district"] = node_data[node_label]["district"]
+            self.all_districts.add(node_data[node_label]["district"])
+        return g
 
+    def __load_json(self, path):
+        """
+            Loads a json file at a particular file-path location (str)
+            Returns a json object corresponding to the data at the specified path
+        """
+        with Path(path).open() as json_file:
+            return json.load(json_file)
 
-def load_json(path):
-    """
-        Loads a json file at a particular file-path location (str)
-        Returns a json object corresponding to the data at the specified path
-    """
-    with Path(path).open() as json_file:
-        return json.load(json_file)
-
-
-def efficiency_gap(district_graph):
-    """
-        Determines the efficiency gap for a given district, and for whom it is in favor
-        NOTE: Currently assumes a two-party system because plurality voting is the status quo; I'll improve the code when we improve our voting system
-    """
-    d_votes = r_votes = winning_votes = losing_votes = 0.00
-    winning_group = ""
-    # Total vote for a representative is just the number of precincts there are - the number of nodes on the graph
-    total_votes = len(district_graph.nodes)
-    # Plurality voting would mean that we wouldn't even need this many votes if more than two systems were relevant players;
-    #   but plurality voting also has a funny way of pushing elections towards two-party systems - so let's just assume that
-    #   only two parties matter and therefore 50% of the precincts are needed
-    votes_to_win = total_votes/2
-
-    # Tally total votes based on the precincts voting history
-    # NOTE: If we wanted to introduce some interderminism, there could be distribution here
-    for precint_label in district_graph.nodes:
-        precint = district_graph.nodes[precint_label]
-        if precint["voting_history"] == "D":
-            d_votes += 1
-        elif precint["voting_history"] == "R":
-            r_votes += 1
-
-    # Determine who the wining_group is and what the efficiency gap is
-    if d_votes > r_votes:
-        winning_group = "D"
-        winning_votes = d_votes
-        losing_votes = r_votes
-    elif r_votes > d_votes:
-        winning_group = "R"
-        winning_votes = r_votes
-        losing_votes = d_votes
-    else:
-        # TODO: Figure out what to do in the case of a tie; probably resample here
+    def __efficiency_gap(self, district_graph):
+        """
+            Determines the efficiency gap for a given district, and for whom it is in favor
+            NOTE: Currently assumes a two-party system because plurality voting is the status quo; I'll improve the code when we improve our voting system
+        """
+        d_votes = r_votes = winning_votes = losing_votes = 0.00
         winning_group = ""
-        efficiency_gap = 0
+        # Total vote for a representative is just the number of precincts there are - the number of nodes on the graph
+        total_votes = len(district_graph.nodes)
+        # Plurality voting would mean that we wouldn't even need this many votes if more than two systems were relevant players;
+        #   but plurality voting also has a funny way of pushing elections towards two-party systems - so let's just assume that
+        #   only two parties matter and therefore 50% of the precincts are needed
+        votes_to_win = total_votes/2
+
+        # Tally total votes based on the precincts voting history
+        # NOTE: If we wanted to introduce some interderminism, there could be distribution here
+        for precint_label in district_graph.nodes:
+            precint = district_graph.nodes[precint_label]
+            if precint["voting_history"] == "D":
+                d_votes += 1
+            elif precint["voting_history"] == "R":
+                r_votes += 1
+
+        # Determine who the wining_group is and what the efficiency gap is
+        if d_votes > r_votes:
+            winning_group = "D"
+            winning_votes = d_votes
+            losing_votes = r_votes
+        elif r_votes > d_votes:
+            winning_group = "R"
+            winning_votes = r_votes
+            losing_votes = d_votes
+        else:
+            # TODO: Figure out what to do in the case of a tie; probably resample here
+            winning_group = ""
+            efficiency_gap = 0
+            return (efficiency_gap, winning_group)
+
+        # RE: The calculation:
+        # - All votes for a losing party are wasted
+        # - Any superflous votes for the winning party are wasted
+        # - Efficiency gap is a measure of how many more votes the losing party wasted than the winning party
+        winning_votes_wasted = winning_votes - votes_to_win
+        losing_votes_wasted = losing_votes
+        efficiency_gap = (losing_votes_wasted - winning_votes_wasted) / total_votes
         return (efficiency_gap, winning_group)
 
-    # RE: The calculation:
-    # - All votes for a losing party are wasted
-    # - Any superflous votes for the winning party are wasted
-    # - Efficiency gap is a measure of how many more votes the losing party wasted than the winning party
-    winning_votes_wasted = winning_votes - votes_to_win
-    losing_votes_wasted = losing_votes
-    efficiency_gap = (losing_votes_wasted - winning_votes_wasted) / total_votes
-    return (efficiency_gap, winning_group)
+    def __find_neighboring_district(self, district):
+        """
+            Given a district, find a district that neighbors it
+            TODO: Do this meaningfully with node_boundary
+        """
+        return "2" if district == "1" else "1"
 
+    def __get_district_nodes(self, g, district_label):
+        """
+            Given a nx.graph and a district_label
+            Return a list of all the precincts (nodes) in that district
+        """
+        return [n for n in g.nodes if g.nodes[n]["district"] == district_label]
 
-# def find_neighboring_district(graph, district_subgraph):
-def find_neighboring_district(district):
-    """
-        Given a district, find a district that neighbors it
-        TODO: Do this meaningfully
-    """
-    return "2" if district == "1" else "1"
+    def __get_node_colors(self, g):
+        return [district_colors[g.nodes[n]["district"]] for n in g.nodes]
 
+    def __get_district_subgraph(self, g, district_label):
+        """
+            Given a nx.graph and a district_label
+            Return a subgraph view (not clone) corresponding to the precincts in that district
+        """
+        relevant_nodes = self.__get_district_nodes(g, district_label)
+        return g.subgraph(relevant_nodes)
 
-def get_district_nodes(g, district_label):
-    """
-        Given a nx.graph and a district_label
-        Return a list of all the precincts (nodes) in that district
-    """
-    return [n for n in g.nodes if g.nodes[n]["district"] == district_label]
+    def __district_size(self, potential_district):
+        """
+            Given a potential district of nodes, using the population size of the district 
+            Return the population size of the district
+        """
+        return reduce(lambda total, precinct: total + int(potential_district.nodes[precinct]["population"]), potential_district.nodes(), 0)
 
+    def __is_valid_mst(self, edge, mst_combined_subgraph, g):
+        """
+            For a given potential edge cut on an MST in the ReCom algorithm,
+            Determine whether a series of required conditions is satisfied, including:
+                1. Population size after new districting,
+        """
+        # 1. Check the population size after this cut
+        # Does cutting this edges create two components with similar population sizes?
+        (tail, head) = edge
+        mst_combined_subgraph.remove_edge(tail, head)
+        components = list(nx.connected_components(mst_combined_subgraph))
+        comp_1 = g.subgraph(components[0])
+        comp_2 = g.subgraph(components[1])
+        pop_total = abs(self.__district_size(comp_1) + self.__district_size(comp_2))
+        pop_diff = abs(self.__district_size(comp_1) - self.__district_size(comp_2))
+        # Add edge back in case this doesn't work
+        mst_combined_subgraph.add_edge(tail, head)
+        return pop_diff < (MAX_POP_DIFFERENCE_PERCENTAGE*pop_total)
 
-def get_node_colors(g):
-    return [district_colors[g.nodes[n]["district"]] for n in g.nodes]
+    def __update_new_districts_with_cut(self, edge, mst_combined_subgraph, g, d1, d2):
+        """
+            After chcecking that an edge chould be cut to create new districts after combining into a single mega-district
+            Redistrict the new components accordingly
+        """
+        (tail, head) = edge
+        mst_combined_subgraph.remove_edge(tail, head)
+        components = list(nx.connected_components(mst_combined_subgraph))
+        comp_1 = g.subgraph(components[0])
+        self.__drawGraph(comp_1)
+        comp_2 = g.subgraph(components[1])
+        self.__drawGraph(comp_2)
+        for node in comp_1.nodes:
+            g.nodes[node]["district"] = d1
+        for node in comp_2.nodes:
+            g.nodes[node]["district"] = d2
 
+    def recombination_of_districts(self):
+        """
+            Given a graph
+            Perform the recombination algorithm described in https://mggg.org/va-report.pdf
+            (Metric Geometry and Gerrymandering Group, Comparison of Districting Plans for the Virginia House of Delegates; Section 2.3.2)
+            Alternative resource: the recombination algorithm described in https://arxiv.org/pdf/1911.05725.pdf
+            (Recombination: A family of Markov chains for redistricting - Daryl DeFord, Moon Duchin, and Justin Solomon)
+        """
+        # Randomly sample a district
+        d1 = str(random.randint(1, len(self.all_districts)))
+        # Select one of its neighboring districts
+        d2 = self.__find_neighboring_district(d1)
+        d2_nodes = self.__get_district_nodes(self.g, d2)
+        d1_nodes = self.__get_district_nodes(self.g, d1)
+        combined_subgraph = self.g.subgraph(d1_nodes + d2_nodes)
+        cuttable = False
+        print("Trying to find a cut")
+        attempt_count = 0
+        while cuttable is False:
+            mst_combined_subgraph =  self.__random_spanning_tree(combined_subgraph)
+            self.__drawGraph(mst_combined_subgraph)
+            # For all edges in the MST
+            for edge in mst_combined_subgraph.edges:
+                # NOTE: Just print somewhat regularly for outputs sake - helps detect infinite loops
+                print("... ", attempt_count) if attempt_count % 10 == 0 else None
+                cond = self.__is_valid_mst(edge, mst_combined_subgraph, self.g)
+                if (cond):
+                    cuttable = True
+                    print("WE HAVE A WINNER")
+                    self.__update_new_districts_with_cut(edge, mst_combined_subgraph, self.g, d1, d2)
+                    self.__drawGraph(self.g)
+                    return edge
+                if (attempt_count == self.rounds):
+                    return
+                else:
+                    attempt_count += 1
+                    (tail, head) = edge
+                    mst_combined_subgraph.add_edge(tail, head)
 
-def get_district_subgraph(g, district_label):
-    """
-        Given a nx.graph and a district_label
-        Return a subgraph view (not clone) corresponding to the precincts in that district
-    """
-    relevant_nodes = get_district_nodes(g, district_label)
-    return g.subgraph(relevant_nodes)
+    def __drawGraph(self, G, options=None):
+        """
+            Given a graph, plot and draw it with these default options, or with options
+        """
 
+        node_colors = self.__get_node_colors(G)
+        options = options if options != None else {
+            'node_color': node_colors,
+            'node_size': 100,
+            "with_labels":True,
+            'width': 3,
+            "font_weight": "bold"
+        }
+        plt.subplot(222)
 
-def district_size(potential_district):
-    """
-        Given a potential district of nodes,
-        Return the population size of the district
-    """
-    return reduce(lambda total, precinct: total + int(potential_district.nodes[precinct]["population"]), potential_district.nodes(), 0)
+        # Draw the graph we've been provided
+        nx.draw_networkx(G, **options)
+        plt.show()
 
-def check_condition_for_edge_cut(edge, mst_combined_subgraph, g):
-    """
-        For a given potential edge cut on an MST in the ReComb algorithm,
-        Determine whether a series of required conditions is satisfied, including:
-            1. Population size after new districting,
-    """
-    # 1. Check the population size after this cut
-    # Does cutting this edges create two components with similar population sizes?
-    (tail, head) = edge
-    mst_combined_subgraph.remove_edge(tail, head)
-    components = list(nx.connected_components(mst_combined_subgraph))
-    comp_1 = g.subgraph(components[0])
-    comp_2 = g.subgraph(components[1])
-    pop_total = abs(district_size(comp_1) + district_size(comp_2))
-    pop_diff = abs(district_size(comp_1) - district_size(comp_2))
-    # Add edge back in case this doesn't work
-    mst_combined_subgraph.add_edge(tail, head)
-    return pop_diff < (MAX_POP_DIFFERENCE_PERCENTAGE*pop_total)
+    def __random_spanning_tree(self, graph):
+        """
+            Given a graph
+            Return a random spanning tree
+        """
+        for edge in graph.edges:
+            graph.edges[edge]["weight"] = random.random()
 
+        spanning_tree = tree.maximum_spanning_tree(
+            graph, algorithm="kruskal", weight="weight"
+        )
+        return spanning_tree
 
-def update_new_districts_with_cut(edge, mst_combined_subgraph, g, d1, d2):
-    """
-        After chcecking that an edge chould be cut to create new districts after combining into a single mega-district
-        Redistrict the new components accordingly
-    """
-    (tail, head) = edge
-    mst_combined_subgraph.remove_edge(tail, head)
-    components = list(nx.connected_components(mst_combined_subgraph))
-    comp_1 = g.subgraph(components[0])
-    drawGraph(comp_1)
-    comp_2 = g.subgraph(components[1])
-    drawGraph(comp_2)
-    for node in comp_1.nodes:
-        g.nodes[node]["district"] = d1
-    for node in comp_2.nodes:
-        g.nodes[node]["district"] = d2
+    def generate_alternative_plans(self):
+        # Draw the graph initially
+        self.__drawGraph(self.g)
 
+        """
+        For cooling many runs: 
+            -  ReCom the graph that many times
+        For rounds many runs 
+            - ReCom the graph
+            - Record the relevant statistics: 
+                - Efficiency gap
+                - Total D votes counted
+                - Total R votes counted
+            - If run % 50 === 0 
+                print to the screen
+            - If run === 5 || 50 || 500
+                Draw the graph
+        Graph the results of this run
+            - PLot 
+        Save the graphs to disk with a unique file name
+        """
 
-def recombination_of_districts(g, attempts):
-    """
-        Given a graph
-        Perform the recombination algorithm described in https://mggg.org/va-report.pdf
-        (Metric Geometry and Gerrymandering Group, Comparison of Districting Plans for the Virginia House of Delegates; Section 2.3.2)
-        Alternative resource: the recombination algorithm described in https://arxiv.org/pdf/1911.05725.pdf
-        (Recombination: A family of Markov chains for redistricting - Daryl DeFord, Moon Duchin, and Justin Solomon)
-    """
-    # Randomly sample a district
-    d1 = str(random.randint(1, len(all_districts)))
-    # Select one of its neighboring districts
-    d2 = find_neighboring_district(d1)
-    d1_nodes = get_district_nodes(g, d1)
-    d2_nodes = get_district_nodes(g, d2)
-    combined_subgraph = g.subgraph(d1_nodes + d2_nodes)
-    cuttable = False
-    print("Trying to find a cut")
-    attempt_count = 0
-    while cuttable is False:
-        mst_combined_subgraph =  random_spanning_tree(g)
-        drawGraph(mst_combined_subgraph)
-        # For all edges in the MST
-        for edge in mst_combined_subgraph.edges:
-            # NOTE: Just print somewhat regularly for outputs sake - helps detect infinite loops
-            print("... ", attempt_count) if attempt_count % 10 == 0 else None
-            cond = check_condition_for_edge_cut(edge, mst_combined_subgraph, g)
-            if (cond):
-                cuttable = True
-                print("WE HAVE A WINNER")
-                update_new_districts_with_cut(edge, mst_combined_subgraph, g, d1, d2)
-                drawGraph(g)
-                return edge
-            if (attempt_count == attempts):
-                return
-            else:
-                attempt_count += 1
-                (tail, head) = edge
-                mst_combined_subgraph.add_edge(tail, head)
+        for d_label in self.all_districts:
+            d_graph = self.__get_district_subgraph(self.g, d_label)
+            eg = self.__efficiency_gap(d_graph)
+            print(eg)
 
-# ReCom Algo:
+        print("Recom")
+        print("==========")
+        self.recombination_of_districts()
 
-# - Look at the subgraph induced by the vertices in both districts
-# - Make an MST for the graph
-#     - Does cutting this edges create two components with similar population sizes
-#         (for subcomponents created by the edge cut, calculat the total population and compare with a delta)
-#     - YES:
-#         Done - keep cut
-#     - NO:
-#         - continue iterating through edges
-# - Redistrict along that edge cut
-
-
-def drawGraph(G, options=None):
-    """
-        Given a graph, plot and draw it with these default options, or with options
-    """
-
-    node_colors = get_node_colors(G)
-    options = options if options != None else {
-        'node_color': node_colors,
-        'node_size': 100,
-        "with_labels":True,
-        'width': 3,
-        "font_weight": "bold"
-    }
-    plt.subplot(222)
-
-    # Draw the graph we've been provided
-    nx.draw_networkx(G, **options)
-    plt.show()
-
-def random_spanning_tree(graph):
-    """
-        Given a graph
-        Return a random spanning tree
-    """
-    for edge in graph.edges:
-        graph.edges[edge]["weight"] = random.random()
-
-    spanning_tree = tree.maximum_spanning_tree(
-        graph, algorithm="kruskal", weight="weight"
-    )
-    return spanning_tree
 
 def main():
     parser = argparse.ArgumentParser(description='Use MCMC Simulation to determine the likelihood that a particular district is an outlier by the efficiency gap metric')
-    parser.add_argument("-f", "--file", default="edge")
-    parser.add_argument("-r", "--recomb", action="store_true")
-    parser.add_argument("-a", "--attempts", type=int, default=20)
+    parser.add_argument("-f", "--file", default=default_file)
+    parser.add_argument("-r", "--rounds", type=int, default=50)
     args = parser.parse_args()
 
     file = args.file
-    recomb = args.recomb
-    attempts = args.attempts
+    rounds = args.rounds
 
-    path = file_lookup_table[file]
-
-    g = import_graph(path, path_metadata, ignore_meta=(file == "shp"))
-    drawGraph(g)
-
-    if recomb:
-        # For all districts, draw the graph
-        for d_label in all_districts:
-            d_graph = get_district_subgraph(g, d_label)
-            eg = efficiency_gap(d_graph)
-            print(eg)
-
-        print("Recomb")
-        print("==========")
-        recombination_of_districts(g, attempts)
+    mcmc = GerrymanderingMCMC(file, rounds=rounds)
+    mcmc.generate_alternative_plans()
 
 if __name__ == "__main__":
     main()
