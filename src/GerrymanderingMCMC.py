@@ -183,9 +183,9 @@ class GerrymanderingMCMC():
         """
             Given a graph
             Perform the recombination algorithm described in https://mggg.org/va-report.pdf
-            (Metric Geometry and Gerrymandering Group, Comparison of Districting Plans for the Virginia House of Delfates; Section 2.3.2)
+            ("Comparison of Districting Plans for the Virginia House of Delfates"; Metric Geometry and Gerrymandering Group; Section 2.3.2)
             Alternative resource: the recombination algorithm described in https://arxiv.org/pdf/1911.05725.pdf
-            (Recombination: A family of Markov chains for redistricting - Daryl DeFord, Moon Duchin, and Justin Solomon)
+            ("Recombination: A family of Markov chains for redistricting"; Daryl DeFord, Moon Duchin, and Justin Solomon)
         """
         graph = self.g.copy()
         # Randomly sample a district
