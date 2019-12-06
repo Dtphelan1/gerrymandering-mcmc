@@ -2,26 +2,28 @@ from pathlib import Path
 import json
 import random
 import networkx as nx
-from networkx.algorithms import tree
+from networkx.algorithms import tree, boundary
 import matplotlib.pyplot as plt
 from functools import reduce
 import argparse
 
 # Globals we care about
-default_file = "./data/precint-data.json"
+default_file = "./data/iowa.json"
 MAX_POP_DIFFERENCE_PERCENTAGE = .05
 
 class GerrymanderingMCMC():
-    def __init__(self, graph_file, cooling_period=50, rounds=200, verbose=False):
+    def __init__(self, graph_file, cooling_period=50, rounds=50, verbose=False):
         # We initialize all_districts here, but we really establish it when we read our graph in
         self.all_districts = set()
         self.g = self.read_graph(graph_file)
         self.cooling_period = cooling_period
         self.rounds = rounds
         self.verbose = verbose
-        self.district_colors = {
-            "1": "red",
-            "2": "blue"
+        self.district_colors_iowa = {
+            "A": "red",
+            "B": "green",
+            "C": "yellow",
+            "D": "blue"
         }
         self.data = []
         self.original_data = {}
@@ -53,6 +55,9 @@ class GerrymanderingMCMC():
         with Path(path).open() as json_file:
             return json.load(json_file)
 
+    def __get_node_colors(self, g):
+        return [self.district_colors_iowa[g.nodes[n]["district"]] for n in g.nodes]
+
     def __efficiency_gap(self, district_graph):
         """
             Determines the efficiency gap for a given district, and for whom it is in favor
@@ -65,7 +70,7 @@ class GerrymanderingMCMC():
         # Plurality voting would mean that we wouldn't even need this many votes if more than two systems were relevant players;
         #   but plurality voting also has a funny way of pushing elections towards two-party systems - so let's just assume that
         #   only two parties matter and therefore 50% of the precincts are needed
-        votes_to_win = total_votes/2
+        votes_to_win = total_votes/2.0
 
         # Tally total votes based on the precincts voting history
         # NOTE: If we wanted to introduce some interderminism, there could be distribution here
@@ -100,12 +105,15 @@ class GerrymanderingMCMC():
         efficiency_gap = (losing_votes_wasted - winning_votes_wasted) / total_votes
         return (efficiency_gap, winning_group)
 
-    def __find_neighboring_district(self, district):
+    def __find_neighboring_district(self, g, district):
         """
-            Given a district, find a district that neighbors it
+            Given a graph and a district, find a district that neighbors it
             TODO: Do this meaningfully with node_boundary
         """
-        return "2" if district == "1" else "1"
+        node_boundary = boundary.node_boundary(g, district.nodes)
+        districts_on_boundary = set([g.nodes[n]["district"] for n in node_boundary])
+        random_district_label = random.sample(districts_on_boundary, 1)[0]
+        return self.__get_district_subgraph(g, random_district_label)
 
     def __get_district_nodes(self, g, district_label):
         """
@@ -113,9 +121,6 @@ class GerrymanderingMCMC():
             Return a list of all the precincts (nodes) in that district
         """
         return [n for n in g.nodes if g.nodes[n]["district"] == district_label]
-
-    def __get_node_colors(self, g):
-        return [self.district_colors[g.nodes[n]["district"]] for n in g.nodes]
 
     def __get_district_subgraph(self, g, district_label):
         """
@@ -132,7 +137,7 @@ class GerrymanderingMCMC():
         """
         return reduce(lambda total, precinct: total + int(potential_district.nodes[precinct]["population"]), potential_district.nodes(), 0)
 
-    def __is_valid_districting(self, edge, mst_combined_subgraph, g):
+    def __is_valid_district_plan(self, edge, mst_combined_subgraph, g):
         """
             For a given potential edge cut on an MST in the ReCom algorithm,
             Determine whether a series of required conditions is satisfied, including:
@@ -176,12 +181,12 @@ class GerrymanderingMCMC():
         """
         graph = self.g.copy()
         # Randomly sample a district
-        d1 = str(random.randint(1, len(self.all_districts)))
-        d1_nodes = self.__get_district_nodes(graph, d1)
+        d1_label = random.sample(self.all_districts, 1)[0]
+        d1 = self.__get_district_subgraph(graph, d1_label)
         # Select one of its neighboring districts
-        d2 = self.__find_neighboring_district(d1)
-        d2_nodes = self.__get_district_nodes(graph, d2)
-        combined_subgraph = graph.subgraph(d1_nodes + d2_nodes)
+        d2 = self.__find_neighboring_district(graph, d1)
+        d2_label = d2.nodes[random.sample(d2.nodes, 1)[0]]["district"]
+        combined_subgraph = graph.subgraph(list(d1.nodes) + list(d2.nodes))
         cuttable = False
         attempt_count = 0
         while cuttable is False:
@@ -189,10 +194,10 @@ class GerrymanderingMCMC():
             # For all edges in the MST
             for edge in mst_combined_subgraph.edges:
                 # If cutting this edge produces a valid districting
-                cond = self.__is_valid_districting(edge, mst_combined_subgraph, graph)
+                cond = self.__is_valid_district_plan(edge, mst_combined_subgraph, graph)
                 if (cond):
                     cuttable = True
-                    self.__update_new_districts_with_cut(edge, mst_combined_subgraph, graph, d1, d2)
+                    self.__update_new_districts_with_cut(edge, mst_combined_subgraph, graph, d1_label, d2_label)
                     return graph
                 if (attempt_count == 1000):
                     print("WARNING: Failed to make a recom after > 1000 iterations") if self.verbose else None
@@ -215,7 +220,7 @@ class GerrymanderingMCMC():
             'width': 3,
             "font_weight": "bold"
         }
-        plt.subplot(222)
+        plt.figure(figsize=(8,8))
 
         # Draw the graph we've been provided
         nx.draw_networkx(G, **options)
@@ -240,7 +245,10 @@ class GerrymanderingMCMC():
             Update our local data record to include stats for this plan
         """
         data_obj = {}
-        data_obj["eg"] = self.__efficiency_gap(graph)[0]
+        data_obj["eg_A"] = self.__efficiency_gap(self.__get_district_subgraph(graph, "A"))[0]
+        data_obj["eg_B"] = self.__efficiency_gap(self.__get_district_subgraph(graph, "B"))[0]
+        data_obj["eg_C"] = self.__efficiency_gap(self.__get_district_subgraph(graph, "C"))[0]
+        data_obj["eg_D"] = self.__efficiency_gap(self.__get_district_subgraph(graph, "D"))[0]
         data_obj["d_districts"] = self.__count_votes(graph, "D")
         data_obj["r_districts"] = self.__count_votes(graph, "R")
         self.data.append(data_obj)
@@ -268,22 +276,28 @@ class GerrymanderingMCMC():
         return reduce(lambda count, d_label: count + 1 if self.__winning_party_for_district(graph, d_label) == party else count , self.all_districts, 0)
 
     def plot_data(self):
-        print(self.data) if self.verbose else None
-        plt.hist([d["eg"] for d in self.data], bins="auto", facecolor='blue')
-        plt.title("Efficiency Gap")
+        plt.hist([d["eg_A"] for d in self.data], bins="auto", alpha=0.5, facecolor='blue')
+        plt.title("Efficiency Gap - District A")
         plt.show()
-        plt.hist([d["d_districts"] for d in self.data], bins="auto", facecolor='blue')
+        plt.hist([d["eg_B"] for d in self.data], bins="auto", alpha=0.5, facecolor='blue')
+        plt.title("Efficiency Gap - District B")
+        plt.show()
+        plt.hist([d["eg_C"] for d in self.data], bins="auto", alpha=0.5, facecolor='blue')
+        plt.title("Efficiency Gap - District C")
+        plt.show()
+        plt.hist([d["eg_D"] for d in self.data], bins="auto", alpha=0.5, facecolor='blue')
+        plt.title("Efficiency Gap - District D")
+        plt.show()
+        plt.hist([d["d_districts"] for d in self.data], bins=5, range=(0,4), alpha=0.5, facecolor='blue')
         plt.title("Democratic Districts")
         plt.show()
-        plt.hist([d["r_districts"] for d in self.data], bins="auto", facecolor='blue')
+        plt.hist([d["r_districts"] for d in self.data], bins=5, range=(0,4), alpha=0.5, facecolor='blue')
         plt.title("Republican Districts")
         plt.show()
 
     def generate_alternative_plans(self):
         # Draw the graph initially
         self.__drawGraph(self.g) if self.verbose else None
-
-        print ()
 
         # Run `cooling`-many rounds to randomize the plan a bit
         for i in range(0, self.cooling_period):
@@ -292,24 +306,25 @@ class GerrymanderingMCMC():
 
         # Run `rounds`-many recombinations to build a distribution of a few key stats
         for i in range(0, self.rounds):
-            print("Finding recomb ... ", i ) if i % 10 == 0 and self.verbose else None
+            print("Finding recomb ... ", i ) if i % 20 == 0 and self.verbose else None
             graph = self.recombination_of_districts(i)
             self.__record_key_stats(graph)
-
 
 
 def main():
     parser = argparse.ArgumentParser(description='Use MCMC Simulation to determine the likelihood that a particular district is an outlier by the efficiency gap metric')
     parser.add_argument("-g", "--graph_file", default=default_file)
+    parser.add_argument("-c", "--cooling_period", type=int, default=50)
     parser.add_argument("-r", "--rounds", type=int, default=50)
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
 
     graph_file = args.graph_file
+    cooling_period = args.cooling_period
     rounds = args.rounds
     verbose = args.verbose
 
-    mcmc = GerrymanderingMCMC(graph_file, rounds=rounds, verbose=verbose)
+    mcmc = GerrymanderingMCMC(graph_file, cooling_period=cooling_period, rounds=rounds, verbose=verbose)
     mcmc.generate_alternative_plans()
 
     # Plot the data for the results of the recombinations

@@ -8,3 +8,4 @@ from functools import reduce
 
 class State():
     def __init__(self, path_graph):
+        return None
