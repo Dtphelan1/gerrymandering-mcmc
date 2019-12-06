@@ -20,7 +20,6 @@ class GerrymanderingMCMC():
         self.all_districts = set()
         self.g = self.read_graph(graph_file)
         self.cooling_period = cooling_period
-        self.rounds = rounds
         self.verbose = verbose
         self.district_colors = {
             "A": "red",
@@ -298,7 +297,7 @@ class GerrymanderingMCMC():
         plt.title("Republican Districts")
         plt.show()
 
-    def generate_alternative_plans(self):
+    def generate_alternative_plans(self, rounds):
         # Draw the graph initially
         self.__drawGraph(self.g) if self.verbose else None
 
@@ -308,7 +307,7 @@ class GerrymanderingMCMC():
             self.recombination_of_districts(i)
 
         # Run `rounds`-many recombinations to build a distribution of a few key stats
-        for i in range(0, self.rounds):
+        for i in range(0, rounds):
             print("Finding recomb ... ", i ) if i % 20 == 0 and self.verbose else None
             graph = self.recombination_of_districts(i)
             self.__record_key_stats(graph)

@@ -16,8 +16,11 @@ def main():
     rounds = args.rounds
     verbose = args.verbose
 
-    mcmc = GerrymanderingMCMC(graph_file, cooling_period=cooling_period, rounds=rounds, verbose=verbose)
-    mcmc.generate_alternative_plans()
+    # Build the gerrymandering MCMC using the variables you've been provided
+    mcmc = GerrymanderingMCMC(graph_file, cooling_period=cooling_period, verbose=verbose)
+
+    # Generate alternative plans
+    mcmc.generate_alternative_plans(rounds)
 
     # Plot the data for the results of the recombinations
     mcmc.plot_data()

@@ -1,5 +1,5 @@
 {
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
-    "python.pythonPath": "/Users/dphelan/.pyenv/versions/gerrymandering-mcmc/bin/python"
+    "python.pythonPath": "/Users/dylanphelan/.pyenv/versions/gerrymandering-mcmc/bin/python"
 }
