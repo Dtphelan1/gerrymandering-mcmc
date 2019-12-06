@@ -80,7 +80,7 @@
             "19"
         ],
         "population": 50,
-        "voting_history": "D",
+        "voting_history": "R",
         "district": "B"
     },
     "10": {
@@ -90,7 +90,7 @@
             "20"
         ],
         "population": 50,
-        "voting_history": "D",
+        "voting_history": "R",
         "district": "B"
     },
     "11": {
@@ -98,7 +98,7 @@
             "21"
         ],
         "population": 50,
-        "voting_history": "D",
+        "voting_history": "R",
         "district": "B"
     },
     "12": {
@@ -107,7 +107,7 @@
             "22"
         ],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "A"
     },
     "13": {
@@ -116,7 +116,7 @@
             "23"
         ],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "A"
     },
     "14": {
@@ -143,7 +143,7 @@
             "27"
         ],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "A"
     },
     "17": {
@@ -170,7 +170,7 @@
             "30"
         ],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "A"
     },
     "20": {
@@ -198,7 +198,7 @@
             "31"
         ],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "A"
     },
     "23": {
@@ -227,7 +227,7 @@
             "35"
         ],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "A"
     },
     "26": {
@@ -255,7 +255,7 @@
             "37"
         ],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "A"
     },
     "29": {
@@ -291,7 +291,7 @@
             "44"
         ],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "A"
     },
     "33": {
@@ -311,7 +311,7 @@
             "46"
         ],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "A"
     },
     "35": {
@@ -321,7 +321,7 @@
             "47"
         ],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "A"
     },
     "36": {
@@ -400,7 +400,7 @@
             "55"
         ],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "A"
     },
     "44": {
@@ -430,7 +430,7 @@
             "59"
         ],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "A"
     },
     "47": {
@@ -440,7 +440,7 @@
             "60"
         ],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "A"
     },
     "48": {
@@ -450,7 +450,7 @@
             "61"
         ],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "A"
     },
     "49": {
@@ -514,7 +514,7 @@
             "67"
         ],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "A"
     },
     "56": {
@@ -911,7 +911,7 @@
     "99": {
         "adjacent_nodes": [],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "D"
     }
 }

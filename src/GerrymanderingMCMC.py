@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import math
 import random
 import networkx as nx
 from networkx.algorithms import tree, boundary
@@ -63,50 +64,47 @@ class GerrymanderingMCMC():
         """
         return [self.district_colors[g.nodes[n]["district"]] for n in g.nodes]
 
-    def __efficiency_gap(self, district_graph):
+    def __efficiency_gap(self, graph):
         """
             Determines the efficiency gap for a given district, and for whom it is in favor
             NOTE: Currently assumes a two-party system because plurality voting is the status quo; I'll improve the code when we improve our voting system
         """
-        d_votes = r_votes = winning_votes = losing_votes = 0.00
-        winning_group = ""
-        # Total vote for a representative is just the number of precincts there are - the number of nodes on the graph
-        total_votes = len(district_graph.nodes)
-        # Plurality voting would mean that we wouldn't even need this many votes if more than two systems were relevant players;
-        #   but plurality voting also has a funny way of pushing elections towards two-party systems - so let's just assume that
-        #   only two parties matter and therefore 50% of the precincts are needed
-        votes_to_win = total_votes/2.0
+        d_votes_wasted = r_votes_wasted  = 0.00
 
-        # Tally total votes based on the precincts voting history
-        for precint_label in district_graph.nodes:
-            precint = district_graph.nodes[precint_label]
-            if precint["voting_history"] == "D":
-                d_votes += 1
-            elif precint["voting_history"] == "R":
-                r_votes += 1
+        # Initialize tally-counters for both parties in each district
+        district_dict = {}
+        for district_label in self.all_districts: 
+            district_dict[district_label] = {"D": 0,  "R": 0}
 
-        # Determine who the wining_group is and what the efficiency gap is
-        if d_votes > r_votes:
-            winning_group = "D"
-            winning_votes = d_votes
-            losing_votes = r_votes
-        elif r_votes > d_votes:
-            winning_group = "R"
-            winning_votes = r_votes
-            losing_votes = d_votes
-        else:
-            winning_group = None
-            efficiency_gap = 0
-            return (efficiency_gap, winning_group)
+        # Count the votes for each party in each district
+        for precinct_label in graph.nodes: 
+            precinct = graph.nodes[precinct_label]
+            precinct_district = precinct["district"]
+            district_dict[precinct_district][precinct["voting_history"]] += 1
 
-        # RE: The calculation:
-        # - All votes for a losing party are wasted
-        # - Any superflous votes for the winning party are wasted
-        # - Efficiency gap is a measure of how many more votes the losing party wasted than the winning party
-        winning_votes_wasted = winning_votes - votes_to_win
-        losing_votes_wasted = losing_votes
-        efficiency_gap = (losing_votes_wasted - winning_votes_wasted) / total_votes
-        return (efficiency_gap, winning_group)
+        # For each district, determine which party won and the wasted votes accordingly
+        for district_label in self.all_districts:
+            district = self.__get_district_subgraph(graph, district_label)
+            # Total vote for a representative is just the number of precincts there are - the number of nodes on the graph
+            total_district_votes = len(district.nodes)
+            # Plurality voting would mean that we wouldn't even need this many votes if more than two systems were relevant players;
+            #   but plurality voting also has a funny way of pushing elections towards two-party systems - so let's just assume that
+            #   only two parties matter and therefore 50% of the precincts are needed
+            votes_to_win = math.ceil(total_district_votes/2.0)
+            d_votes = district_dict[district_label]["D"]
+            r_votes = district_dict[district_label]["R"]
+
+            # And again - votes are wasted if they are cast for a losing party, or are a surplus beyond the amount required to win
+            if d_votes > r_votes: 
+                d_votes_wasted += d_votes - votes_to_win
+                r_votes_wasted += r_votes
+            elif r_votes > d_votes: 
+                d_votes_wasted += d_votes
+                r_votes_wasted += r_votes - votes_to_win
+            else: 
+                None
+                # NOTE: Pass when the district ends in a tie
+        return (max([d_votes_wasted, r_votes_wasted]) - min([d_votes_wasted, r_votes_wasted])) / len(graph.nodes)
 
     def __random_district_label(self, graph):
         """
@@ -185,7 +183,7 @@ class GerrymanderingMCMC():
         """
             Given a graph
             Perform the recombination algorithm described in https://mggg.org/va-report.pdf
-            (Metric Geometry and Gerrymandering Group, Comparison of Districting Plans for the Virginia House of Delegates; Section 2.3.2)
+            (Metric Geometry and Gerrymandering Group, Comparison of Districting Plans for the Virginia House of Delfates; Section 2.3.2)
             Alternative resource: the recombination algorithm described in https://arxiv.org/pdf/1911.05725.pdf
             (Recombination: A family of Markov chains for redistricting - Daryl DeFord, Moon Duchin, and Justin Solomon)
         """
@@ -255,13 +253,13 @@ class GerrymanderingMCMC():
             Update our local data record to include stats for this plan
         """
         data_obj = {}
-        data_obj["eg_A"] = self.__efficiency_gap(self.__get_district_subgraph(graph, "A"))[0]
-        data_obj["eg_B"] = self.__efficiency_gap(self.__get_district_subgraph(graph, "B"))[0]
-        data_obj["eg_C"] = self.__efficiency_gap(self.__get_district_subgraph(graph, "C"))[0]
-        data_obj["eg_D"] = self.__efficiency_gap(self.__get_district_subgraph(graph, "D"))[0]
+        data_obj["eg"] = self.__efficiency_gap(graph)
         data_obj["d_districts"] = self.__count_votes(graph, "D")
         data_obj["r_districts"] = self.__count_votes(graph, "R")
-        self.data.append(data_obj)
+        if is_original_plan: 
+            self.original_data = data_obj
+        else: 
+            self.data.append(data_obj)
 
     def __winning_party_for_district(self, graph, district_label):
         """
@@ -286,15 +284,20 @@ class GerrymanderingMCMC():
         return reduce(lambda count, d_label: count + 1 if self.__winning_party_for_district(graph, d_label) == party else count , self.all_districts, 0)
 
     def plot_data(self):
-        for district_label in sorted(self.all_districts):
-            plt.hist([d["eg_" + district_label] for d in self.data], bins="auto", alpha=0.5, facecolor='blue')
-            plt.title("Efficiency Gap - District " + district_label)
-            plt.show()
+        plt.hist([d["eg"] for d in self.data], bins="auto", alpha=0.5, facecolor='blue')
+        plt.title("Efficiency Gap")
+        plt.axvline(self.original_data["eg"], label="Original Plan")
+        plt.legend()
+        plt.show()
         plt.hist([d["d_districts"] for d in self.data], bins=5, range=(0,4), alpha=0.5, facecolor='blue')
         plt.title("Democratic Districts")
+        plt.axvline(self.original_data["d_districts"], label="Original Plan")
+        plt.legend()
         plt.show()
         plt.hist([d["r_districts"] for d in self.data], bins=5, range=(0,4), alpha=0.5, facecolor='blue')
         plt.title("Republican Districts")
+        plt.axvline(self.original_data["r_districts"], label="Original Plan")
+        plt.legend()
         plt.show()
 
     def generate_alternative_plans(self, rounds):
