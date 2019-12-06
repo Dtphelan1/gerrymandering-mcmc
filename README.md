@@ -8,16 +8,20 @@ Markov chain monte carlo simulator used to assess the outliership of a district 
 
 
 ## Usage
-- TEMPORARY: `cd` into the `src` directory and from there run `python script.py`
+- `python cli.py -h` for more help
 
 
-## Rough Sketch of the Project
+## Project Explained
 This project (mirroring the work of the Metric Geometry and Gerrymandering Group) explores one way of quantifying the likelihood a district is gerrymandered. In particular, this project looks at Markov Chain Monte Carlo simulation as a way of exploring how districts would be redistricted by using a new method of district-generation called Recombination (ReCom)
 
-In order, this project will:
-- Model a state as the dual-graph of the planar breakdown of precincts.
-- Given a graph-file (supported currently are adjlist.txt and edgelist.txt) and metadata detailing party allegiance and district, plot a distribution of what simulated redistrictings
-
+Several important technical detials regarding this project include:
+- We model a state graphically by looking at the dual-graph of that state's precincts. Since this is a planar graph to begin with, we know the dual will also be planar.
+- For the scope of data created by this project, two precincts are adjacent if they are rook-adjacent; we will not be complicating matters with queen adjacency.
+- Given a graph-file (supported is a custom format described in the **Data_Format** section below) build an ensemble of simulated redistrictings and plot relevant key statistics for those redistrictings
+- Some of the key statistics we will be looking at are:
+    - Efficiency Gap for a given district
+    - Number of total winning precincts voting "D"
+    - Number of total winning precincts voting "R"
 
 #### Terms:
 The simulation we're going for here is a basic approach outlined in some of the work by Moon Duchin and others. For references, see the **References** section below. Before starting any technical explanation, the following core terms need to be understood:
@@ -37,13 +41,14 @@ The simulation we're going for here is a basic approach outlined in some of the 
 4. Generate a new graph by modifying the graph fed in by flipping the district of nodes on the periphery of districts
 5. Generate a new graph by using the ReCom technique
     - Find two neighboring districts
+        - Do this by looking at the node-boundary for all nodes in a district
     - Merge them into a single district
-    - Draw an MST for that single district
-    - An edge is identied that will separate the merged area into two equal-sized districts.
-    - Removing that edge determines the new plan.
+    - Draw an Spanning Tree for that single district
+    - For all edges in that Spanning Tree
+        - Find an edge s.t. removing this edge produce a "valid" redistricting plan
+    - Update the graph with our new districts
 
-
-## Ramblings/Sketches of what needs to be done/Psuedocode:
+## More Psuedocode for the Curious:
 
 #### Loading data from file:
 Add_nodes_from([(node, attrdict), (n2, ad2), ...]): Use (node, attrdict) tuples to update attributes for specific nodes.
@@ -71,8 +76,13 @@ Thought: Store at the class level the neighboring relationship between districts
 - Calculate the amount of votes required for a party to win a district
 - Identify party that wins for the district
 - For all precincts in the district:
-    - Did your candidate win the plurality?
-        - YES: INC wasted votes if you voted
+    - Determine the winning party
+    - For the losing party:
+        - All precincts voting in favor are wasted
+    - For the winning party:
+        - Wasted precinct votes are those that go beyond the amount required to win the district
+- The efficiency gap for the district:
+    - (losing_votes_wasted - winning_votes_wasted) / total_votes
 
 
 ## References:

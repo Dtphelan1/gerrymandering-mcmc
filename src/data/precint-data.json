@@ -3,108 +3,108 @@
         "adjacent_nodes": ["b", "c", "e"],
         "population": 50,
         "voting_history": "D",
-        "district": "1"
+        "district": "A"
     },
     "b": {
         "adjacent_nodes": ["c", "d"],
         "population": 55,
         "voting_history": "R",
-        "district": "1"
+        "district": "A"
     },
     "c": {
         "adjacent_nodes": ["d", "e", "f"],
         "population": 45,
         "voting_history": "R",
-        "district": "1"
+        "district": "A"
     },
     "d": {
         "adjacent_nodes": ["f", "g"],
         "population": 40,
         "voting_history": "R",
-        "district": "1"
+        "district": "A"
     },
     "e": {
         "adjacent_nodes": ["f", "i", "j", "k"],
         "population": 30,
         "voting_history": "D",
-        "district": "1"
+        "district": "A"
     },
     "f": {
         "adjacent_nodes": ["g", "h", "i"],
         "population": 45,
         "voting_history": "D",
-        "district": "1"
+        "district": "A"
     },
     "g": {
         "adjacent_nodes": ["h"],
         "population": 60,
         "voting_history": "D",
-        "district": "1"
+        "district": "A"
     },
     "h": {
         "adjacent_nodes": ["i", "l", "m"],
         "population": 55,
         "voting_history": "D",
-        "district": "1"
+        "district": "A"
     },
     "i": {
         "adjacent_nodes": ["k", "l", "p"],
         "population": 55,
         "voting_history": "D",
-        "district": "2"
+        "district": "B"
     },
     "j": {
         "adjacent_nodes": ["k", "p", "q"],
         "population": 55,
         "voting_history": "D",
-        "district": "2"
+        "district": "B"
     },
     "k": {
         "adjacent_nodes": [],
         "population": 55,
         "voting_history": "D",
-        "district": "2"
+        "district": "B"
     },
     "l": {
         "adjacent_nodes": ["m", "n", "o", "p"],
         "population": 55,
         "voting_history": "D",
-        "district": "2"
+        "district": "B"
     },
     "m": {
         "adjacent_nodes": ["n"],
         "population": 55,
         "voting_history": "D",
-        "district": "2"
+        "district": "B"
     },
     "n": {
         "adjacent_nodes": ["o", "r"],
         "population": 55,
         "voting_history": "D",
-        "district": "2"
+        "district": "B"
     },
     "o": {
         "adjacent_nodes": ["p", "r"],
         "population": 50,
         "voting_history": "D",
-        "district": "2"
+        "district": "B"
     },
     "p": {
         "adjacent_nodes": ["q"],
         "population": 40,
         "voting_history": "R",
-        "district": "2"
+        "district": "B"
     },
     "q": {
         "adjacent_nodes": [],
         "population": 60,
         "voting_history": "R",
-        "district": "2"
+        "district": "B"
     },
     "r": {
         "adjacent_nodes": [],
         "population": 50,
         "voting_history": "D",
-        "district": "2"
+        "district": "B"
     }
 }
