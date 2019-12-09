@@ -30,6 +30,7 @@ optional arguments:
                         the console
 ```
 
+
 ## Project Explained
 This project (mirroring the work of the Metric Geometry and Gerrymandering Group) explores one way of quantifying the likelihood a district is gerrymandered. In particular, this project looks at Markov Chain Monte Carlo simulation as a way of exploring how districts would be redistricted by using a new method of district-generation called Recombination (ReCom)
 
@@ -95,7 +96,7 @@ The data format we've cooked together is as follows:
         - Find an edge s.t. removing this edge produce a "valid" redistricting plan
     - Update the graph with our new districts
 
-### More Psuedocode for the Curious:
+### More Psuedocode and Old Sketches for the Curious:
 
 #### Loading data from file:
 Add_nodes_from([(node, attrdict), (n2, ad2), ...]): Use (node, attrdict) tuples to update attributes for specific nodes.

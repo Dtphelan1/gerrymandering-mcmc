@@ -301,9 +301,6 @@ class GerrymanderingMCMC():
         plt.show()
 
     def generate_alternative_plans(self, rounds):
-        # Draw the graph initially
-        self.__drawGraph(self.g) if self.verbose else None
-
         # Run `cooling`-many rounds to randomize the plan a bit
         for i in range(0, self.cooling_period):
             print("Randomizing the seed plan", i ) if i % 25 == 0 and self.verbose else None

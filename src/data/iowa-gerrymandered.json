@@ -391,7 +391,7 @@
             "54"
         ],
         "population": 50,
-        "voting_history": "D",
+        "voting_history": "R",
         "district": "B"
     },
     "43": {
@@ -571,7 +571,7 @@
             "73"
         ],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "D"
     },
     "62": {
@@ -581,7 +581,7 @@
             "74"
         ],
         "population": 50,
-        "voting_history": "R",
+        "voting_history": "D",
         "district": "B"
     },
     "63": {
@@ -911,7 +911,7 @@
     "99": {
         "adjacent_nodes": [],
         "population": 50,
-        "voting_history": "D",
+        "voting_history": "R",
         "district": "D"
     }
 }
