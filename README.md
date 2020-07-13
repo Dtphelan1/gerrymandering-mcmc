@@ -80,7 +80,7 @@ The data format we've cooked together is as follows:
 - Details on how Efficiency Gap is calculated: "The Math Behind Gerrymandering and Wasted Votes"; Patrick Honner with Quanta Magazine; https://www.quantamagazine.org/the-math-behind-gerrymandering-and-wasted-votes-20171012/ and https://simonsfoundation.s3.amazonaws.com/share/QUANTA/2017/DoingThePoliticalMathWorksheet.pdf
 
 
-## Here Be Sausage-Making:
+## Scrap Heap: Free-floating Ideas 
 
 ### Technical Roadmap:
 1. Get a single graph file reading in through CLI
